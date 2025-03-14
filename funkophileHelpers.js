@@ -13,7 +13,7 @@ module.exports = {
 			try{
         return selected[Object.keys(selected)[0]]
       } catch (e) {
-        console.error("error", e)
+        console.error("error in contentOfFile", e)
 				console.error("selected", selected)
 				console.error("selector", selector)
 				process.exit(-1)

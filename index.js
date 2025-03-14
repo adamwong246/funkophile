@@ -3,6 +3,7 @@
 const chokidar = require('chokidar');
 const createSelector = require('reselect').createSelector;
 const createStore = require('redux').createStore;
+const fs = require("fs")
 const fse = require("fs-extra")
 const glob = require("glob-promise");
 const path = require("path")
@@ -12,7 +13,8 @@ Promise.config({
 	cancellation: true
 });
 
-const funkophileConfig = require(process.argv[2])
+const configFile = path.resolve(process.argv[2]);
+const funkophileConfig = require(configFile)
 const mode = process.argv[3]
 const keyToWatch = process.argv[4]
 
@@ -24,23 +26,23 @@ const previousState = {}
 let outputPromise = Promise.resolve();
 
 const logger = {
-	watchError: (path) => console.log("\u001b[7m ! \u001b[0m" + path),
-	watchReady: (path) => console.log("\u001b[7m\u001b[36m  <  \u001b[0m" + path),
-	watchAdd: (path) => console.log("\u001b[7m\u001b[34m  +  \u001b[0m./" + path),
-	watchChange: (path) => console.log("\u001b[7m\u001b[35m  *  \u001b[0m" + path),
-	watchUnlink: (path) => console.log("\u001b[7m\u001b[31m  -  \u001b[0m./" + path),
+	watchError: (p) => console.log("\u001b[7m ! \u001b[0m" + p),
+	watchReady: (p) => console.log("\u001b[7m\u001b[36m  <  \u001b[0m" + p),
+	watchAdd: (p) => console.log("\u001b[7m\u001b[34m  +  \u001b[0m./" + p),
+	watchChange: (p) => console.log("\u001b[7m\u001b[35m  *  \u001b[0m" + p),
+	watchUnlink: (p) => console.log("\u001b[7m\u001b[31m  -  \u001b[0m./" + p),
 
 	stateChange: () => console.log("\u001b[7m\u001b[31m --- Redux state changed --- \u001b[0m"),
 
-	cleaningEmptyfolder: (path) => console.log("\u001b[31m\u001b[7m XXX! \u001b[0m" + path),
+	cleaningEmptyfolder: (p) => console.log("\u001b[31m\u001b[7m XXX! \u001b[0m" + p),
 
-	readingFile: (path) => console.log("\u001b[31m <-- \u001b[0m" + path),
-	removedFile: (path) => console.log("\u001b[31m\u001b[7m ??? \u001b[0m./" + path),
+	readingFile: (p) => console.log("\u001b[31m <-- \u001b[0m" + p),
+	removedFile: (p) => console.log("\u001b[31m\u001b[7m ??? \u001b[0m./" + p),
 
-	writingString: (path) => console.log("\u001b[32m --> \u001b[0m" + path),
-	writingFunction: (path) => console.log("\u001b[33m ... \u001b[0m" + path),
-	writingPromise: (path) => console.log("\u001b[33m ... \u001b[0m" + path),
-	writingError: (path, message) => console.log("\u001b[31m !!! \u001b[0m" + path + " " + message),
+	writingString: (p) => console.log("\u001b[32m --> \u001b[0m" + p),
+	writingFunction: (p) => console.log("\u001b[33m ... \u001b[0m" + p),
+	writingPromise: (p) => console.log("\u001b[33m ... \u001b[0m" + p),
+	writingError: (p, message) => console.log("\u001b[31m !!! \u001b[0m" + p + " " + message),
 
 	waiting: () => console.log("\u001b[7m Funkophile is done for now but waiting on changes...\u001b[0m "),
 	done: () => console.log("\u001b[7m Funkophile is done!\u001b[0m ")
@@ -78,7 +80,7 @@ const dispatchUpsert = (store, key, file, encodings) => {
 		payload: {
 			key: key,
 			src: file,
-			contents: fse.readFileSync(file, Object.keys(encodings).find((e) => encodings[e].includes(file.split('.')[2])))
+			contents: fse.readFileSync(file, Object.keys(encodings).find((e) => encodings[e].includes(file.split('.')[1])))
 		}
 	});
 
@@ -159,10 +161,13 @@ Promise.all(
 	Object.keys(funkophileConfig.inputs)
 	// ['FUNKYBUNDLE']
 .map((inputRuleKey) => {
-	const path = `./${funkophileConfig.options.inFolder}/${funkophileConfig.inputs[inputRuleKey] || ''}`
+	const p = path.resolve(`./${funkophileConfig.options.inFolder}/${funkophileConfig.inputs[inputRuleKey] || ''}`)
+
+	// console.log("mark3", p)
+
 	return new Promise((fulfill, reject) => {
 		if (mode === "build") {
-			glob(path, {}).then((files) => {
+			glob(p, {}).then((files) => {
 				files.forEach((file) => {
 					dispatchUpsert(store, inputRuleKey, file, funkophileConfig.encodings);
 				})
@@ -171,37 +176,37 @@ Promise.all(
 			})
 		} else if (mode === "watch") {
 
-			chokidar.watch(path, {})
+			chokidar.watch(p, {})
 				.on('error', error => {
-					logger.watchError(path)
+					logger.watchError(p)
 				})
 				.on('ready', () => {
-					logger.watchReady(path)
+					logger.watchReady(p)
 					fulfill()
 				})
-				.on('add', path => {
-					logger.watchAdd(path)
-					dispatchUpsert(store, inputRuleKey, './' + path, funkophileConfig.encodings);
+				.on('add', p => {
+					logger.watchAdd(p)
+					dispatchUpsert(store, inputRuleKey, './' + p, funkophileConfig.encodings);
 				})
-				.on('change', path => {
-					logger.watchChange(path)
-					dispatchUpsert(store, inputRuleKey, './' + path, funkophileConfig.encodings);
+				.on('change', p => {
+					logger.watchChange(p)
+					dispatchUpsert(store, inputRuleKey, './' + p, funkophileConfig.encodings);
 				})
-				.on('unlink', path => {
-					logger.watchUnlink(path)
+				.on('unlink', p => {
+					logger.watchUnlink(p)
 					store.dispatch({
 							type: REMOVE,
 							payload: {
 								key: inputRuleKey,
-								file: './' + path
+								file: './' + p
 							}
 						})
 				})
-        .on('unlinkDir', path => {
-          logger.watchUnlink(path)
+        .on('unlinkDir', p => {
+          logger.watchUnlink(p)
         })
-        // .on('raw', (event, path, details) => { // internal
-        //   log('Raw event info:', event, path, details);
+        // .on('raw', (event, p, details) => { // internal
+        //   log('Raw event info:', event, p, details);
         // })
 
 		} else {
@@ -214,8 +219,10 @@ Promise.all(
 
 	// listen for changes to the store
 	store.subscribe(() => {
+		const s = store.getState()
+
 		logger.stateChange()
-		const outputs = finalSelector(store.getState())
+		const outputs = finalSelector(s)
 
 		if (outputPromise.isPending()) {
 			console.log('cancelling previous write!')
@@ -286,8 +293,8 @@ Promise.all(
 								});
 
 							} else {
-								console.log("I don't recognize what this is but I will try to write it to a file: " + relativeFilePath, contents)
-								fse.outputFile(relativeFilePath, contents, callback);
+								console.log(`I don't recognize what this is but I will try to write it to a file: ` + relativeFilePath, contents)
+								fse.outputFile(relativeFilePath, JSON.stringify(contents, null, 2), fulfill);
 								logger.writingString(relativeFilePath);
 							}
 						} else {
