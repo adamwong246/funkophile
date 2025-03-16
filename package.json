@@ -1,6 +1,6 @@
 {
   "name": "funkophile",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "repository": "git@github.com:adamwong246/funkophile.git",
   "author": "adam wong <adamwong246@gmail.com>",
   "license": "MIT",
@@ -17,6 +17,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/redux": "^3.6.0",
     "@types/reselect": "^2.2.0",
+    "glob": "^11.0.1",
     "glob-promise": "^6.0.7",
     "tsc": "^2.0.4",
     "typescript": "^5.8.2"
