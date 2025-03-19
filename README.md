@@ -2,10 +2,9 @@
 
 The _func_ tional _file_ processor.
 
-### About
 #### *What* is Funkophile?
 
-Funkophile is a build tool that inputs files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. No plugins are needed because what once was configuration is now code- EVERYTHING is done in redux selectors.
+Funkophile is a build tool that inputs files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. No plugins are needed because what once was configuration is now code- EVERYTHING is done in redux selectors. 
 
 #### What is Funkophile *not*?
 
@@ -16,7 +15,7 @@ Funkophile is a build tool that inputs files, processes them, and then outputs t
 
 #### *Why* is Funkophile **awesome**?
 
-Funkophile is a functional file processor. It lets you manipulate files in a *functional* way- using redux selectors- and it does so efficiently- using promises. **It lets you focus on the logic of your selectors and disregard the processing of files**. You setup in some files to read, some files to write, and some selectors filled with easily testable logic- Funkophile will handle the borings parts for you! When you first start Funkophile, it will process every file. Subsequent changes to an input file will run through your selectors and automatically update _only_ the dependent output files. It just works! (tm)
+Funkophile is a functional file processor. It lets you manipulate files in a functionally - using redux selectors- and it does so efficiently- using promises. **It lets you focus on the logic of your selectors and disregard the processing of files**. You setup in some files to read, some files to write, and some selectors filled with easily testable logic- Funkophile will handle the borings parts for you! When you first start Funkophile, it will process every file. Subsequent changes to an input file will run through your selectors and automatically update _only_ the dependent output files. It just works! (tm)
 
 #### What Funkophile *can do*
 

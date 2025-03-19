@@ -8,16 +8,16 @@ export const contentsOfFiles = (selector) => {
 
 export const contentOfFile = (selector) => {
   return createSelector([selector], (selected) => {
-    try {
-      return selected[Object.keys(selected)[0]];
+    try{
+      return selected[Object.keys(selected)[0]]
     } catch (e) {
-      console.error("error in contentOfFile", e);
-      console.error("selected", selected);
-      console.error("selector", selector);
-      process.exit(-1);
+      console.error("error", e)
+      console.error("selected", selected)
+      console.error("selector", selector)
+      process.exit(-1)
     }
-  });
-};
+  })
+}
 
 export const srcAndContentOfFile = (selector, key: string) => {
   return createSelector([selector], (selected) => {
