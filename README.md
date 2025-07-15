@@ -1,10 +1,10 @@
 # Funkophile
 
-The _func_ tional _file_ processor.
+The _func_tional _file_ processor.
 
 #### *What* is Funkophile?
 
-Funkophile is a build tool that inputs files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. No plugins are needed because what once was configuration is now code- EVERYTHING is done in redux selectors. 
+Funkophile is a very small build tool that inputs files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. No plugins are needed because what once was configuration is now code- EVERYTHING is done in redux selectors. 
 
 #### What is Funkophile *not*?
 

@@ -62,6 +62,7 @@ export default (funkophileConfig) => {
             type: UPSERT,
             payload: {
                 key: key,
+                // key: path.relative(process.cwd(), key),
                 src: file,
                 contents: fse.readFileSync(file, encoding),
             },

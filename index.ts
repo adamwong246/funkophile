@@ -101,7 +101,8 @@ export default (funkophileConfig: {
     store.dispatch({
       type: UPSERT,
       payload: {
-        key: key,
+				key: key,
+				// key: path.relative(process.cwd(), key),
         src: file,
         contents: fse.readFileSync(file, encoding),
       },
