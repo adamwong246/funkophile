@@ -7,17 +7,92 @@ import { glob } from "glob";
 import path from "path";
 import Promise from "bluebird";
 
-export default (funkophileConfig: {
-	mode: 'build' | 'watch';
-	initialState: any;
-	options: {
-		inFolder: string;
-		outFolder: string;
-	},
-	encodings: Record<string, string[]>,
-	inputs: Record<string, string>,
-	outputs: (x: any) => any;
-}) => {
+interface PayloadAction<T = unknown> extends Action<string> {
+  payload: T;
+}
+
+type UpsertPayload = {
+  key: string;
+  src: string;
+  contents: string | Buffer;
+};
+
+type RemovePayload = {
+  key: string;
+  file: string;
+};
+
+interface FileContents {
+  [key: string]: string | Buffer;
+}
+
+interface InputState {
+  [key: string]: FileContents;
+}
+
+type AppState = {
+  initialLoad: boolean;
+  timestamp: number;
+} & InputState;
+
+interface FunkophileConfig {
+  mode: 'build' | 'watch';
+  initialState: InputState;
+  options: {
+    inFolder: string;
+    outFolder: string;
+  };
+  encodings: Record<string, string[]>;
+  inputs: Record<string, string>;
+  outputs: (selectors: Record<string, (state: AppState) => FileContents>) => 
+    Record<
+      string,
+      string |
+      Buffer |
+      Promise<string | Buffer>>;
+}
+
+export const contentsOfFiles = <T extends FileContents>(selector: (state: AppState) => T) => {
+  return createSelector([selector], (selected) => {
+    return Object.keys(selected).reduce((mm, k) => mm + selected[k], "");
+  });
+};
+
+export const contentOfFile = <T extends FileContents>(selector: (state: AppState) => T) => {
+  return createSelector([selector], (selected) => {
+    try{
+      return selected[Object.keys(selected)[0]]
+    } catch (e) {
+      console.error("error", e)
+      console.error("selected", selected)
+      console.error("selector", selector)
+      process.exit(-1)
+    }
+  })
+}
+
+export const srcAndContentOfFile = <T extends FileContents>(selector: (state: AppState) => T, key: string) => {
+  return createSelector([selector], (selected) => {
+    return {
+      src: key,
+      content: selected[key],
+    };
+  });
+};
+
+export const srcAndContentOfFiles = <T extends FileContents>(selector: (state: AppState) => T) => {
+  return createSelector([selector], (selected) => {
+    const keys = Object.keys(selected);
+    return keys.map((key) => {
+      return {
+        src: key,
+        content: selected[key],
+      };
+    });
+  });
+};
+
+export default (funkophileConfig: FunkophileConfig) => {
 
   Promise.config({
     cancellation: true,
@@ -27,8 +102,8 @@ export default (funkophileConfig: {
   const UPSERT = "UPSERT";
   const REMOVE = "REMOVE";
 
-  const previousState: any = {};
-  let outputPromise = Promise.resolve();
+  const previousState: Record<string, unknown> = {};
+  let outputPromise: Promise<void> = Promise.resolve();
 
   const logger = {
     watchError: (p: string) => console.log("\u001b[7m ! \u001b[0m" + p),
@@ -85,7 +160,7 @@ export default (funkophileConfig: {
   }
 
   const dispatchUpsert = (
-    store: Store,
+    store: Store<AppState, PayloadAction<UpsertPayload | RemovePayload | boolean>>,
     key: string,
     file: string,
     encodings: Record<string, string[]>
@@ -109,45 +184,46 @@ export default (funkophileConfig: {
     });
   };
 
-  function omit(key: string, obj: any) {
+  function omit(key: string, obj: FileContents): FileContents {
     const { [key]: omitted, ...rest } = obj;
     return rest;
   }
 
-  const store: Store<any, Action<string>, any> = createStore(
+  const store = createStore<AppState, PayloadAction<UpsertPayload | RemovePayload | boolean>, unknown, unknown>(
     (
-      state = {
+      state: AppState = {
         initialLoad: true,
         ...funkophileConfig.initialState,
         timestamp: Date.now(),
       },
-      action
+      action: PayloadAction<UpsertPayload | RemovePayload | boolean>
     ) => {
       // console.log("\u001b[7m\u001b[35m ||| Redux recieved action \u001b[0m", action.type)
+      const typedAction = action as PayloadAction<any>;
       if (!action.type.includes("@@redux")) {
-        if (action.type === INITIALIZE) {
+        if (typedAction.type === INITIALIZE) {
           return {
             ...state,
             initialLoad: false,
             timestamp: Date.now(),
           };
-        } else if (action.type === UPSERT) {
+        } else if (typedAction.type === UPSERT) {
           return {
             ...state,
-            [action["payload"].key]: {
-              ...state[action.payload.key],
+            [typedAction.payload.key]: {
+              ...state[typedAction.payload.key],
               ...{
-                [action["payload"].src]: action["payload"].contents,
+                [typedAction.payload.src]: typedAction.payload.contents,
               },
             },
             timestamp: Date.now(),
           };
-        } else if (action.type === REMOVE) {
+        } else if (typedAction.type === REMOVE) {
           return {
             ...state,
-            [action["payload"].key]: omit(
-              action["payload"].file,
-              state[action["payload"].key]
+            [typedAction.payload.key]: omit(
+              typedAction.payload.file,
+              state[typedAction.payload.key]
             ),
             timestamp: Date.now(),
           };
@@ -162,7 +238,7 @@ export default (funkophileConfig: {
     }
   );
 
-  const finalSelector = funkophileConfig.outputs(
+  const finalSelector: Record<string, unknown> = funkophileConfig.outputs(
     Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
       return {
         ...mm,
@@ -180,7 +256,7 @@ export default (funkophileConfig: {
         }`
       );
 
-      return new Promise((fulfill, reject) => {
+      return new Promise<void>((fulfill, reject) => {
         if (funkophileConfig.mode === "build") {
           glob(p, {})
             .then((files: string[]) => {
@@ -294,7 +370,13 @@ export default (funkophileConfig: {
 
                 if (typeof contents === "function") {
                   logger.writingFunction(relativeFilePath);
-                  contents((err, res) => {
+                  contents((err: Error | null, res: unknown) => {
+                    if (err) {
+                      throw err;
+                    }
+                    if (typeof res !== 'string' && !Buffer.isBuffer(res)) {
+                      throw new Error('Invalid content type');
+                    }
                     fse.outputFile(relativeFilePath, res, fulfill);
                     logger.writingString(relativeFilePath);
                   });

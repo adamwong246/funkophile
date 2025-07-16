@@ -4,31 +4,24 @@ The _func_tional _file_ processor.
 
 #### *What* is Funkophile?
 
-Funkophile is a very small build tool that inputs files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. No plugins are needed because what once was configuration is now code- EVERYTHING is done in redux selectors. 
+Funkophile is a very small build tool with 1 simple purpose- it reads files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. 
 
 #### What is Funkophile *not*?
 
-- Funkophile is _not_ webpack or rollup. It does not *just* build JS bundles, though it could help you do so.
-- Funkophile is _not_ grunt or gulp. It is not *just* a task runner, it is a file-processor. The "tasks" Funkophile runs are functions run on files. 
+- Funkophile is _not_ webpack or rollup. 
+- Funkophile is _not_ grunt or gulp. 
 - Funkophile is _not_ a module loader.
 - Funkophile is _not necessarily_ for web development. It has a much broader use-case.
 
-#### *Why* is Funkophile **awesome**?
+#### What Funkophile *can do for you*
 
-Funkophile is a functional file processor. It lets you manipulate files in a functionally - using redux selectors- and it does so efficiently- using promises. **It lets you focus on the logic of your selectors and disregard the processing of files**. You setup in some files to read, some files to write, and some selectors filled with easily testable logic- Funkophile will handle the borings parts for you! When you first start Funkophile, it will process every file. Subsequent changes to an input file will run through your selectors and automatically update _only_ the dependent output files. It just works! (tm)
-
-#### What Funkophile *can do*
-
-- Funkophile can replace your flavor-of-the-week State Site Generator with a hackable and lightweight solution.
-- Funkophile can replace some of the things that grunt or gulp do.
-- Funkophile can replace some of the things that webpack is used for.
-- Funkophile can replace both build tools (like grunt and gulp) and bundlers (like webpack and rollup).
-- Funkophile is also very unopinionated and works well with other tools grunt, gulp, webpack, and rollups.
 - Funkophile can functionally and efficiently watch files for changes, process them, then write them back to the filesystem.
+- Funkophile can replace your flavor-of-the-week State Site Generator
+- Funkophile is also very unopinionated and works well with other tools grunt, gulp, webpack, and rollup.
 
 #### What Funkophile *should not be used for*
 
-- Funkophile should only be used in a purely functional way. __Funkophile is asynchronous so that your code does not need to be.__ You should only use Funkophile if you can write purely functional redux selectors. Luckily, these concepts are not that difficult to learn!
+- Funkophile should only be used in a purely functional way. Being based on "selectors", you should only write "pure" aka side effect free functions. 
 
 ### Funkophile.config.js
 

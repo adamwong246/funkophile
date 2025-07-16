@@ -6,6 +6,43 @@ import fse from "fs-extra";
 import { glob } from "glob";
 import path from "path";
 import Promise from "bluebird";
+export const contentsOfFiles = (selector) => {
+    return createSelector([selector], (selected) => {
+        return Object.keys(selected).reduce((mm, k) => mm + selected[k], "");
+    });
+};
+export const contentOfFile = (selector) => {
+    return createSelector([selector], (selected) => {
+        try {
+            return selected[Object.keys(selected)[0]];
+        }
+        catch (e) {
+            console.error("error", e);
+            console.error("selected", selected);
+            console.error("selector", selector);
+            process.exit(-1);
+        }
+    });
+};
+export const srcAndContentOfFile = (selector, key) => {
+    return createSelector([selector], (selected) => {
+        return {
+            src: key,
+            content: selected[key],
+        };
+    });
+};
+export const srcAndContentOfFiles = (selector) => {
+    return createSelector([selector], (selected) => {
+        const keys = Object.keys(selected);
+        return keys.map((key) => {
+            return {
+                src: key,
+                content: selected[key],
+            };
+        });
+    });
+};
 export default (funkophileConfig) => {
     Promise.config({
         cancellation: true,
@@ -78,30 +115,31 @@ export default (funkophileConfig) => {
         timestamp: Date.now(),
     }, action) => {
         // console.log("\u001b[7m\u001b[35m ||| Redux recieved action \u001b[0m", action.type)
+        const typedAction = action;
         if (!action.type.includes("@@redux")) {
-            if (action.type === INITIALIZE) {
+            if (typedAction.type === INITIALIZE) {
                 return {
                     ...state,
                     initialLoad: false,
                     timestamp: Date.now(),
                 };
             }
-            else if (action.type === UPSERT) {
+            else if (typedAction.type === UPSERT) {
                 return {
                     ...state,
-                    [action["payload"].key]: {
-                        ...state[action.payload.key],
+                    [typedAction.payload.key]: {
+                        ...state[typedAction.payload.key],
                         ...{
-                            [action["payload"].src]: action["payload"].contents,
+                            [typedAction.payload.src]: typedAction.payload.contents,
                         },
                     },
                     timestamp: Date.now(),
                 };
             }
-            else if (action.type === REMOVE) {
+            else if (typedAction.type === REMOVE) {
                 return {
                     ...state,
-                    [action["payload"].key]: omit(action["payload"].file, state[action["payload"].key]),
+                    [typedAction.payload.key]: omit(typedAction.payload.file, state[typedAction.payload.key]),
                     timestamp: Date.now(),
                 };
             }
@@ -211,6 +249,12 @@ export default (funkophileConfig) => {
                             if (typeof contents === "function") {
                                 logger.writingFunction(relativeFilePath);
                                 contents((err, res) => {
+                                    if (err) {
+                                        throw err;
+                                    }
+                                    if (typeof res !== 'string' && !Buffer.isBuffer(res)) {
+                                        throw new Error('Invalid content type');
+                                    }
                                     fse.outputFile(relativeFilePath, res, fulfill);
                                     logger.writingString(relativeFilePath);
                                 });

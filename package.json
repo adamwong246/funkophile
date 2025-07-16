@@ -1,6 +1,6 @@
 {
   "name": "funkophile",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": "git@github.com:adamwong246/funkophile.git",
   "author": "adam wong <adamwong246@gmail.com>",
   "license": "MIT",
@@ -12,7 +12,7 @@
   "main": "./dist/esm.index.js",
   "types": "./dist/esm/index.d.ts",
   "scripts": {
-    "transpile": "tsc --project tsconfig.json "
+    "transpile": "tsc --project tsconfig.json > tsc.log"
   },
   "dependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
