@@ -1,0 +1,59 @@
+warning ../../package.json: No license field
+$ mocha --loader=ts '**/*.test.ts'
+
+
+  Funkophile Core
+    makeStore
+      ✔ should create a store with empty state until it is initialized
+    omit
+      ✔ should remove the specified key from object
+    selectors
+      for the pages
+        ✔ contentsOfFiles should concatenate all file contents
+        ✔ contentOfFile should return first file content
+        ✔ srcAndContentOfFile should return src and content
+        ✔ srcAndContentOfFiles should return array of src/content pairs
+      for the posts
+        ✔ contentsOfFiles should concatenate all file contents
+        ✔ contentOfFile should return first file content
+        ✔ srcAndContentOfFile should return src and content
+        ✔ srcAndContentOfFiles should return array of src/content pairs
+    createInputSelectors
+      ✔ should create a selector for each input key
+      ✔ selectors should return the corresponding state slice
+    store actions
+      ✔ should handle INITIALIZE action
+      ✔ should handle UPSERT action
+      ✔ should handle REMOVE action
+    edge cases
+An input selector returned a different result when passed same arguments.
+This means your output selector will likely run more frequently than intended.
+Avoid returning a new reference inside your input selector, e.g.
+`createSelector([state => state.todos.map(todo => todo.id)], todoIds => todoIds.length)` {
+  arguments: [Arguments] {
+    '0': { timestamp: 1752731765346, posts: [Object], pages: [Object] }
+  },
+  firstInputs: [ {} ],
+  secondInputs: [ {} ],
+  stack: 'Error\n' +
+    '    at Object.runInputStabilityCheck (/Users/adam/Code/funkophile/node_modules/reselect/src/devModeChecks/inputStabilityCheck.ts:41:13)\n' +
+    '    at dependenciesChecker (/Users/adam/Code/funkophile/node_modules/reselect/src/createSelectorCreator.ts:432:31)\n' +
+    '    at memoized (/Users/adam/Code/funkophile/node_modules/reselect/src/weakMapMemoize.ts:228:21)\n' +
+    '    at Context.<anonymous> (/Users/adam/Code/funkophile/index.test.ts:193:14)\n' +
+    '    at callFn (/Users/adam/Code/funkophile/node_modules/mocha/lib/runnable.js:366:21)\n' +
+    '    at Runnable.run (/Users/adam/Code/funkophile/node_modules/mocha/lib/runnable.js:354:5)\n' +
+    '    at Runner.runTest (/Users/adam/Code/funkophile/node_modules/mocha/lib/runner.js:715:10)\n' +
+    '    at /Users/adam/Code/funkophile/node_modules/mocha/lib/runner.js:838:12\n' +
+    '    at next (/Users/adam/Code/funkophile/node_modules/mocha/lib/runner.js:630:14)\n' +
+    '    at /Users/adam/Code/funkophile/node_modules/mocha/lib/runner.js:640:7\n' +
+    '    at next (/Users/adam/Code/funkophile/node_modules/mocha/lib/runner.js:523:14)\n' +
+    '    at Immediate._onImmediate (/Users/adam/Code/funkophile/node_modules/mocha/lib/runner.js:608:5)\n' +
+    '    at process.processImmediate (node:internal/timers:478:21)'
+}
+      ✔ should handle empty file contents
+      ✔ should handle Buffer content
+      ✔ should throw on invalid selector
+
+
+  18 passing (10ms)
+

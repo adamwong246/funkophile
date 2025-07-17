@@ -1,6 +1,5 @@
-import { Store } from "redux";
-import Promise from "bluebird";
 import { Action } from "redux";
+import Promise from "bluebird";
 export type UpsertPayload = {
     key: string;
     src: string;
@@ -172,7 +171,6 @@ export declare const srcAndContentOfFiles: <T extends FileContents>(selector: (s
     argsMemoize: typeof import("reselect").weakMapMemoize;
     memoize: typeof import("reselect").weakMapMemoize;
 };
-export declare const makeStore: (funkophileConfig: FunkophileConfig) => Store<AppState, PayloadAction<boolean | UpsertPayload | RemovePayload>, unknown>;
+export declare const makeStore: (funkophileConfig: FunkophileConfig) => import("redux").Store<AppState, PayloadAction<boolean | UpsertPayload | RemovePayload>, unknown>;
+export declare const makeFinalSelector: (funkophileConfig: FunkophileConfig) => (state: AppState) => Record<string, unknown>;
 export declare const createInputSelectors: (funkophileConfig: FunkophileConfig) => Record<string, (state: AppState) => FileContents>;
-declare const _default: (funkophileConfig: FunkophileConfig) => void;
-export default _default;

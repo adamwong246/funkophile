@@ -1,7 +1,9 @@
-index.ts(192,95): error TS2344: Type 'unknown' does not satisfy the constraint '{}'.
-index.ts(194,7): error TS2322: Type '{ timestamp: number; initialLoad: true; }' is not assignable to type 'AppState'.
-  Type '{ timestamp: number; initialLoad: true; }' is not assignable to type 'InputState'.
+index.test.ts(84,19): error TS2345: Argument of type '{ src: string; content: unknown; }' is not assignable to parameter of type 'never'.
+index.ts(147,5): error TS2344: Type 'unknown' does not satisfy the constraint '{}'.
+index.ts(151,7): error TS2322: Type '{ timestamp: number; }' is not assignable to type 'AppState'.
+  Type '{ timestamp: number; }' is not assignable to type 'InputState'.
     Property 'timestamp' is incompatible with index signature.
       Type 'number' is not assignable to type 'FileContents'.
-index.ts(333,23): error TS2349: This expression is not callable.
-  Type 'Record<string, unknown>' has no call signatures.
+index.ts(378,23): error TS2349: This expression is not callable.
+  Type 'Record<string, string | Buffer<ArrayBufferLike> | Bluebird<string | Buffer<ArrayBufferLike>>>' has no call signatures.
+test-utils.ts(1,58): error TS2307: Cannot find module './core' or its corresponding type declarations.

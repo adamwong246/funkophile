@@ -1,31 +1,55 @@
+import path from "path";
 import chokidar from "chokidar";
-import { createSelector } from "reselect";
-import { createStore } from "redux";
 import fs from "fs";
 import fse from "fs-extra";
-import { glob } from "glob";
-import path from "path";
 import Promise from "bluebird";
+import { createSelector } from "reselect";
+import { createStore } from "redux";
+import { glob } from "glob";
+export const INITIALIZE = "INITIALIZE";
+export const UPSERT = "UPSERT";
+export const REMOVE = "REMOVE";
+export const previousState = {};
+export const basicPromise = Promise.resolve();
+export const logger = {
+    watchError: (p) => console.log("\u001b[7m ! \u001b[0m" + p),
+    watchReady: (p) => console.log("\u001b[7m\u001b[36m  <  \u001b[0m" + p),
+    watchAdd: (p) => console.log("\u001b[7m\u001b[34m  +  \u001b[0m./" + p),
+    watchChange: (p) => console.log("\u001b[7m\u001b[35m  *  \u001b[0m" + p),
+    watchUnlink: (p) => console.log("\u001b[7m\u001b[31m  -  \u001b[0m./" + p),
+    stateChange: () => console.log("\u001b[7m\u001b[31m --- Redux state changed --- \u001b[0m"),
+    cleaningEmptyfolder: (p) => console.log("\u001b[31m\u001b[7m XXX! \u001b[0m" + p),
+    readingFile: (p) => console.log("\u001b[31m <-- \u001b[0m" + p),
+    removedFile: (p) => console.log("\u001b[31m\u001b[7m ??? \u001b[0m./" + p),
+    writingString: (p) => console.log("\u001b[32m --> \u001b[0m" + p),
+    writingFunction: (p) => console.log("\u001b[33m ... \u001b[0m" + p),
+    writingPromise: (p) => console.log("\u001b[33m ... \u001b[0m" + p),
+    writingError: (p, message) => console.log("\u001b[31m !!! \u001b[0m" + p + " " + message),
+    waiting: () => console.log("\u001b[7m Funkophile is done for now but waiting on changes...\u001b[0m "),
+    done: () => console.log("\u001b[7m Funkophile is done!\u001b[0m "),
+};
+export function omit(key, obj) {
+    const { [key]: omitted, ...rest } = obj;
+    return rest;
+}
 export const contentsOfFiles = (selector) => {
-    return createSelector([selector], (selected) => {
-        return Object.keys(selected).reduce((mm, k) => mm + selected[k], "");
+    return createSelector([(state) => selector(state)], (selected) => {
+        return Object.keys(selected).reduce((mm, k) => {
+            const content = selected[k];
+            return mm + (typeof content === "string" ? content : content.toString());
+        }, "");
     });
 };
 export const contentOfFile = (selector) => {
-    return createSelector([selector], (selected) => {
-        try {
-            return selected[Object.keys(selected)[0]];
+    return createSelector([(state) => selector(state)], (selected) => {
+        if (!selected || Object.keys(selected).length === 0) {
+            throw new Error("No files found");
         }
-        catch (e) {
-            console.error("error", e);
-            console.error("selected", selected);
-            console.error("selector", selector);
-            process.exit(-1);
-        }
+        return selected[Object.keys(selected)[0]];
     });
 };
 export const srcAndContentOfFile = (selector, key) => {
-    return createSelector([selector], (selected) => {
+    return createSelector([(state) => selector(state)], (selected) => {
         return {
             src: key,
             content: selected[key],
@@ -33,7 +57,7 @@ export const srcAndContentOfFile = (selector, key) => {
     });
 };
 export const srcAndContentOfFiles = (selector) => {
-    return createSelector([selector], (selected) => {
+    return createSelector([(state) => selector(state)], (selected) => {
         const keys = Object.keys(selected);
         return keys.map((key) => {
             return {
@@ -43,113 +67,109 @@ export const srcAndContentOfFiles = (selector) => {
         });
     });
 };
-export default (funkophileConfig) => {
-    Promise.config({
-        cancellation: true,
-    });
-    const INITIALIZE = "INITIALIZE";
-    const UPSERT = "UPSERT";
-    const REMOVE = "REMOVE";
-    const previousState = {};
-    let outputPromise = Promise.resolve();
-    const logger = {
-        watchError: (p) => console.log("\u001b[7m ! \u001b[0m" + p),
-        watchReady: (p) => console.log("\u001b[7m\u001b[36m  <  \u001b[0m" + p),
-        watchAdd: (p) => console.log("\u001b[7m\u001b[34m  +  \u001b[0m./" + p),
-        watchChange: (p) => console.log("\u001b[7m\u001b[35m  *  \u001b[0m" + p),
-        watchUnlink: (p) => console.log("\u001b[7m\u001b[31m  -  \u001b[0m./" + p),
-        stateChange: () => console.log("\u001b[7m\u001b[31m --- Redux state changed --- \u001b[0m"),
-        cleaningEmptyfolder: (p) => console.log("\u001b[31m\u001b[7m XXX! \u001b[0m" + p),
-        readingFile: (p) => console.log("\u001b[31m <-- \u001b[0m" + p),
-        removedFile: (p) => console.log("\u001b[31m\u001b[7m ??? \u001b[0m./" + p),
-        writingString: (p) => console.log("\u001b[32m --> \u001b[0m" + p),
-        writingFunction: (p) => console.log("\u001b[33m ... \u001b[0m" + p),
-        writingPromise: (p) => console.log("\u001b[33m ... \u001b[0m" + p),
-        writingError: (p, message) => console.log("\u001b[31m !!! \u001b[0m" + p + " " + message),
-        waiting: () => console.log("\u001b[7m Funkophile is done for now but waiting on changes...\u001b[0m "),
-        done: () => console.log("\u001b[7m Funkophile is done!\u001b[0m "),
-    };
-    function cleanEmptyFoldersRecursively(folder) {
-        var isDir = fs.statSync(folder).isDirectory();
-        if (!isDir) {
-            return;
+export const makeStore = (funkophileConfig) => createStore((state = {
+    // initialLoad: true,
+    ...funkophileConfig.initialState,
+    timestamp: Date.now(),
+}, action) => {
+    // console.log("\u001b[7m\u001b[35m ||| Redux recieved action \u001b[0m", action.type)
+    const typedAction = action;
+    if (!action.type.includes("@@redux")) {
+        if (typedAction.type === INITIALIZE) {
+            return {
+                ...state,
+                timestamp: Date.now(),
+            };
         }
-        var files = fs.readdirSync(folder);
-        if (files.length > 0) {
-            files.forEach(function (file) {
-                var fullPath = path.join(folder, file);
-            });
-            // re-evaluate files; after deleting subfolder
-            // we may have parent folder empty now
-            files = fs.readdirSync(folder);
-        }
-        if (files.length == 0) {
-            logger.cleaningEmptyfolder(folder);
-            fs.rmdirSync(folder);
-            return;
-        }
-    }
-    const dispatchUpsert = (store, key, file, encodings) => {
-        const fileType = path.basename(file).split(".")[1];
-        let encoding = Object.keys(encodings).find((e) => {
-            return encodings[e].includes(fileType);
-        });
-        logger.readingFile(file);
-        store.dispatch({
-            type: UPSERT,
-            payload: {
-                key: key,
-                // key: path.relative(process.cwd(), key),
-                src: file,
-                contents: fse.readFileSync(file, encoding),
-            },
-        });
-    };
-    function omit(key, obj) {
-        const { [key]: omitted, ...rest } = obj;
-        return rest;
-    }
-    const store = createStore((state = {
-        initialLoad: true,
-        ...funkophileConfig.initialState,
-        timestamp: Date.now(),
-    }, action) => {
-        // console.log("\u001b[7m\u001b[35m ||| Redux recieved action \u001b[0m", action.type)
-        const typedAction = action;
-        if (!action.type.includes("@@redux")) {
-            if (typedAction.type === INITIALIZE) {
-                return {
-                    ...state,
-                    initialLoad: false,
-                    timestamp: Date.now(),
-                };
-            }
-            else if (typedAction.type === UPSERT) {
-                return {
-                    ...state,
-                    [typedAction.payload.key]: {
-                        ...state[typedAction.payload.key],
-                        ...{
-                            [typedAction.payload.src]: typedAction.payload.contents,
-                        },
+        else if (typedAction.type === UPSERT) {
+            return {
+                ...state,
+                [typedAction.payload.key]: {
+                    ...state[typedAction.payload.key],
+                    ...{
+                        [typedAction.payload.src]: typedAction.payload.contents,
                     },
-                    timestamp: Date.now(),
-                };
-            }
-            else if (typedAction.type === REMOVE) {
-                return {
-                    ...state,
-                    [typedAction.payload.key]: omit(typedAction.payload.file, state[typedAction.payload.key]),
-                    timestamp: Date.now(),
-                };
-            }
-            else {
-                console.error("Redux was asked to handle an unknown action type: " + action.type);
-                process.exit(-1);
-            }
-            // return state
+                },
+                timestamp: Date.now(),
+            };
         }
+        else if (typedAction.type === REMOVE) {
+            return {
+                ...state,
+                [typedAction.payload.key]: omit(typedAction.payload.file, state[typedAction.payload.key]),
+                timestamp: Date.now(),
+            };
+        }
+        else {
+            console.error("Redux was asked to handle an unknown action type: " + action.type);
+            process.exit(-1);
+        }
+        // return state
+    }
+});
+// export const makeFinalSelector = (funkophileConfig: FunkophileConfig) => {
+//   const inputSelectors = createInputSelectors(funkophileConfig);
+//   const outputFunctions = funkophileConfig.outputs(inputSelectors);
+//   return (state: AppState) => {
+//     const results: Record<string, unknown> = {};
+//     for (const [key, fn] of Object.entries(outputFunctions)) {
+//       results[key] = fn(state);  //typeof fn === 'function' ? fn(state) : fn;
+//     }
+//     return results;
+//   };
+// };
+export const createInputSelectors = (funkophileConfig) => {
+    return Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
+        return {
+            ...mm,
+            [inputKey]: createSelector([(state) => state], (root) => root[inputKey]),
+        };
+    }, {});
+};
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Promise.config({
+    cancellation: true,
+});
+let outputPromise = basicPromise;
+function cleanEmptyFoldersRecursively(folder) {
+    var isDir = fs.statSync(folder).isDirectory();
+    if (!isDir) {
+        return;
+    }
+    var files = fs.readdirSync(folder);
+    if (files.length > 0) {
+        files.forEach(function (file) {
+            var fullPath = path.join(folder, file);
+        });
+        // re-evaluate files; after deleting subfolder
+        // we may have parent folder empty now
+        files = fs.readdirSync(folder);
+    }
+    if (files.length == 0) {
+        logger.cleaningEmptyfolder(folder);
+        fs.rmdirSync(folder);
+        return;
+    }
+}
+const dispatchUpsert = (store, key, file, encodings) => {
+    const fileType = path.basename(file).split(".")[1];
+    let encoding = Object.keys(encodings).find((e) => {
+        return encodings[e].includes(fileType);
     });
+    logger.readingFile(file);
+    store.dispatch({
+        type: UPSERT,
+        payload: {
+            key: key,
+            // key: path.relative(process.cwd(), key),
+            src: file,
+            contents: fse.readFileSync(file, encoding),
+        },
+    });
+};
+export default (funkophileConfig) => {
+    const store = makeStore(funkophileConfig);
+    // const finalSelector = makeFinalSelector(funkophileConfig);
     const finalSelector = funkophileConfig.outputs(Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
         return {
             ...mm,
@@ -252,8 +272,8 @@ export default (funkophileConfig) => {
                                     if (err) {
                                         throw err;
                                     }
-                                    if (typeof res !== 'string' && !Buffer.isBuffer(res)) {
-                                        throw new Error('Invalid content type');
+                                    if (typeof res !== "string" && !Buffer.isBuffer(res)) {
+                                        throw new Error("Invalid content type");
                                     }
                                     fse.outputFile(relativeFilePath, res, fulfill);
                                     logger.writingString(relativeFilePath);
