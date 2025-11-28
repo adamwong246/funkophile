@@ -1,6 +1,6 @@
 {
   "name": "funkophile",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "repository": "git@github.com:adamwong246/funkophile.git",
   "author": "adam wong <adamwong246@gmail.com>",
   "license": "MIT",
@@ -12,7 +12,8 @@
   "main": "./dist/esm.index.js",
   "types": "./dist/esm/index.d.ts",
   "scripts": {
-    "transpile": "tsc --project tsconfig.json "
+    "build": "tsx build.ts",
+    "dev": "tsx --watch dev.ts"
   },
   "dependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
@@ -22,10 +23,16 @@
     "@types/redux": "^3.6.0",
     "@types/reselect": "^2.2.0",
     "bluebird": "3.7.2",
+    "chokidar": "^4.0.3",
+    "esbuild": "^0.25.0",
     "fs-extra": "^11.3.0",
     "glob": "11.0.1",
     "tsc": "^2.0.4",
+    "tsx": "^4.20.6",
     "typescript": "^5.8.2"
+  },
+  "devDependencies": {
+    "chokidar-cli": "^3.0.0"
   },
   "exports": {
     ".": {
@@ -34,7 +41,9 @@
       "default": "./dist/esm/index.js"
     },
     "./funkophileHelpers": {
-      "import": "./dist/esm/funkophileHelpers.js"
+      "types": "./dist/esm/funkophileHelpers.d.ts",
+      "import": "./dist/esm/funkophileHelpers.js",
+      "default": "./dist/esm/funkophileHelpers.js"
     }
   }
 }
