@@ -76,30 +76,31 @@ var makeStore = (funkophileConfig) => createStore(
     ...funkophileConfig.initialState,
     timestamp: Date.now()
   }, action) => {
-    const typedAction = action;
     if (!action.type.includes("@@redux")) {
-      if (typedAction.type === INITIALIZE) {
+      if (action.type === INITIALIZE) {
         return {
           ...state,
           timestamp: Date.now()
         };
-      } else if (typedAction.type === UPSERT) {
+      } else if (action.type === UPSERT) {
+        const upsertPayload = action.payload;
         return {
           ...state,
-          [typedAction.payload.key]: {
-            ...state[typedAction.payload.key],
+          [upsertPayload.key]: {
+            ...state[upsertPayload.key] || {},
             ...{
-              [typedAction.payload.src]: typedAction.payload.contents
+              [upsertPayload.src]: upsertPayload.contents
             }
           },
           timestamp: Date.now()
         };
-      } else if (typedAction.type === REMOVE) {
+      } else if (action.type === REMOVE) {
+        const removePayload = action.payload;
         return {
           ...state,
-          [typedAction.payload.key]: omit(
-            typedAction.payload.file,
-            state[typedAction.payload.key]
+          [removePayload.key]: omit(
+            removePayload.file,
+            state[removePayload.key] || {}
           ),
           timestamp: Date.now()
         };
@@ -110,6 +111,7 @@ var makeStore = (funkophileConfig) => createStore(
         process.exit(-1);
       }
     }
+    return state;
   }
 );
 var createInputSelectors = (funkophileConfig) => {
@@ -163,14 +165,13 @@ var dispatchUpsert = (store, key, file, encodings) => {
 };
 var index_default = (funkophileConfig) => {
   const store = makeStore(funkophileConfig);
-  const finalSelector = funkophileConfig.outputs(
-    Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
-      return {
-        ...mm,
-        [inputKey]: createSelector([(x) => x], (root) => root[inputKey])
-      };
-    }, {})
-  );
+  const inputSelectors = Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
+    return {
+      ...mm,
+      [inputKey]: createSelector([(x) => x], (root) => root[inputKey] || {})
+    };
+  }, {});
+  const finalSelector = funkophileConfig.outputs(inputSelectors);
   Promise2.all(
     Object.keys(funkophileConfig.inputs).map((inputRuleKey) => {
       const p = path.resolve(
@@ -265,7 +266,8 @@ var index_default = (funkophileConfig) => {
                 const contents = outputs[key];
                 if (typeof contents === "function") {
                   logger.writingFunction(relativeFilePath);
-                  contents((err, res) => {
+                  const func = contents;
+                  func((err, res) => {
                     if (err) {
                       throw err;
                     }
@@ -288,7 +290,7 @@ var index_default = (funkophileConfig) => {
                     fulfill
                   );
                   logger.writingString(relativeFilePath);
-                } else if (typeof contents.then === "function") {
+                } else if (contents && typeof contents.then === "function") {
                   logger.writingPromise(relativeFilePath);
                   Promise2.resolve(contents).then(
                     function(value) {

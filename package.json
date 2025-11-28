@@ -19,7 +19,9 @@
   },
   "scripts": {
     "build": "tsx build.ts",
-    "dev": "tsx --watch dev.ts"
+    "dev": "tsx --watch dev.ts",
+    "test": "mocha index.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",

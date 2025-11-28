@@ -27,10 +27,9 @@ export interface InputState {
   [key: string]: FileContents;
 }
 
-export type AppState = {
-  // initialLoad: boolean;
+export type AppState = InputState & {
   timestamp: number;
-} & InputState;
+};
 
 export interface FunkophileConfig {
   mode: "build" | "watch";
@@ -43,7 +42,7 @@ export interface FunkophileConfig {
   inputs: Record<string, string>;
   outputs: (
     selectors: Record<string, (state: AppState) => FileContents>
-  ) => Record<string, string | Buffer | Promise<string | Buffer>>;
+  ) => Record<string, string | Buffer | Promise<string | Buffer> | ((callback: (err: Error | null, res: string | Buffer) => void) => void)>;
 }
 
 export const INITIALIZE = "INITIALIZE";
@@ -141,12 +140,7 @@ export const srcAndContentOfFiles = <T extends FileContents>(
 };
 
 export const makeStore = (funkophileConfig: FunkophileConfig) =>
-  createStore<
-    AppState,
-    PayloadAction<UpsertPayload | RemovePayload | boolean>,
-    unknown,
-    unknown
-  >(
+  createStore(
     (
       state: AppState = {
         // initialLoad: true,
@@ -154,32 +148,33 @@ export const makeStore = (funkophileConfig: FunkophileConfig) =>
         timestamp: Date.now(),
       },
       action: PayloadAction<UpsertPayload | RemovePayload | boolean>
-    ) => {
+    ): AppState => {
       // console.log("\u001b[7m\u001b[35m ||| Redux recieved action \u001b[0m", action.type)
-      const typedAction = action as PayloadAction<any>;
       if (!action.type.includes("@@redux")) {
-        if (typedAction.type === INITIALIZE) {
+        if (action.type === INITIALIZE) {
           return {
             ...state,
             timestamp: Date.now(),
           };
-        } else if (typedAction.type === UPSERT) {
+        } else if (action.type === UPSERT) {
+          const upsertPayload = action.payload as UpsertPayload;
           return {
             ...state,
-            [typedAction.payload.key]: {
-              ...state[typedAction.payload.key],
+            [upsertPayload.key]: {
+              ...(state[upsertPayload.key] || {}),
               ...{
-                [typedAction.payload.src]: typedAction.payload.contents,
+                [upsertPayload.src]: upsertPayload.contents,
               },
             },
             timestamp: Date.now(),
           };
-        } else if (typedAction.type === REMOVE) {
+        } else if (action.type === REMOVE) {
+          const removePayload = action.payload as RemovePayload;
           return {
             ...state,
-            [typedAction.payload.key]: omit(
-              typedAction.payload.file,
-              state[typedAction.payload.key]
+            [removePayload.key]: omit(
+              removePayload.file,
+              state[removePayload.key] || {}
             ),
             timestamp: Date.now(),
           };
@@ -189,8 +184,8 @@ export const makeStore = (funkophileConfig: FunkophileConfig) =>
           );
           process.exit(-1);
         }
-        // return state
       }
+      return state;
     }
   );
 
@@ -283,14 +278,14 @@ export default (funkophileConfig: FunkophileConfig) => {
   const store = makeStore(funkophileConfig);
 
   // const finalSelector = makeFinalSelector(funkophileConfig);
-  const finalSelector = funkophileConfig.outputs(
-    Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
-      return {
-        ...mm,
-        [inputKey]: createSelector([(x) => x], (root) => root[inputKey]),
-      };
-    }, {})
-  );
+  const inputSelectors = Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
+    return {
+      ...mm,
+      [inputKey]: createSelector([(x: AppState) => x], (root) => root[inputKey] || {}),
+    };
+  }, {} as Record<string, (state: AppState) => FileContents>);
+  
+  const finalSelector = funkophileConfig.outputs(inputSelectors);
 
   // Wait for all the file watchers to check in
   Promise.all(
@@ -415,7 +410,9 @@ export default (funkophileConfig: FunkophileConfig) => {
 
                 if (typeof contents === "function") {
                   logger.writingFunction(relativeFilePath);
-                  contents((err: Error | null, res: unknown) => {
+                  // Cast to a callable function type
+                  const func = contents as (callback: (err: Error | null, res: string | Buffer) => void) => void;
+                  func((err: Error | null, res: string | Buffer) => {
                     if (err) {
                       throw err;
                     }
@@ -438,9 +435,9 @@ export default (funkophileConfig: FunkophileConfig) => {
                     fulfill
                   );
                   logger.writingString(relativeFilePath);
-                } else if (typeof contents.then === "function") {
+                } else if (contents && typeof (contents as Promise<any>).then === "function") {
                   logger.writingPromise(relativeFilePath);
-                  Promise.resolve(contents).then(
+                  Promise.resolve(contents as Promise<string | Buffer>).then(
                     function (value) {
                       if (value instanceof Error) {
                         logger.writingError(relativeFilePath, value.message);
@@ -460,7 +457,7 @@ export default (funkophileConfig: FunkophileConfig) => {
                     typeof contents,
                     contents
                   );
-                  fse.outputFile(relativeFilePath, contents, fulfill);
+                  fse.outputFile(relativeFilePath, contents as string | Buffer, fulfill);
                   logger.writingString(relativeFilePath);
                 }
               } else {
