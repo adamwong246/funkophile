@@ -55,22 +55,3 @@ const config = {
   })
 };
 
-export default config;
-```
-
-## Getting Started
-
-1. Install dependencies:
-```bash
-yarn install
-```
-
-2. Build once:
-```bash
-yarn transpile
-```
-
-3. Watch for changes and serve:
-```bash
-yarn dev
-```
