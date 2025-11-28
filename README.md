@@ -2,36 +2,75 @@
 
 The _func_tional _file_ processor.
 
-#### *What* is Funkophile?
+Funkophile is a lightweight, functional build tool that processes files using Redux selectors. It can operate in both build and watch modes, making it perfect for static site generation, asset pipelines, and other file transformation tasks.
 
-Funkophile is a very small build tool with 1 simple purpose- it reads files, processes them, and then outputs them. Optionally, it can watch those files for changes, and updating the output files very efficiently. 
+## Key Features
 
-#### What is Funkophile *not*?
+- **Functional Architecture**: Uses Redux for state management and Reselect for efficient memoized computations
+- **File Watching**: Automatically rebuilds when input files change
+- **Development Server**: Built-in HTTP server for previewing output
+- **Flexible Input/Output**: Define input patterns and output transformations using pure functions
+- **No Plugins Needed**: Everything is configured through code using familiar Redux patterns
 
-- Funkophile is _not_ webpack or rollup. 
-- Funkophile is _not_ grunt or gulp. 
-- Funkophile is _not_ a module loader.
-- Funkophile is _not necessarily_ for web development. It has a much broader use-case.
+## How It Works
 
-#### What Funkophile *can do for you*
+1. **Inputs**: Define glob patterns to watch for input files
+2. **Processing**: Files are read into the Redux store
+3. **Transformation**: Custom selector functions process the file contents
+4. **Output**: Results are written to the output directory
 
-- Funkophile can functionally and efficiently watch files for changes, process them, then write them back to the filesystem.
-- Funkophile can replace your flavor-of-the-week State Site Generator
-- Funkophile is also very unopinionated and works well with other tools grunt, gulp, webpack, and rollup.
+## Example Usage
 
-#### What Funkophile *should not be used for*
+```javascript
+import funkophile from 'funkophile';
+import { contentsOfFiles } from './funkophileHelpers';
 
-- Funkophile should only be used in a purely functional way. Being based on "selectors", you should only write "pure" aka side effect free functions. 
+const config = {
+  mode: 'watch', // or 'build'
+  initialState: {},
+  options: {
+    inFolder: 'src',
+    outFolder: 'dist',
+    port: 8080
+  },
+  encodings: {
+    'utf8': ['html', 'css', 'js', 'txt', 'md'],
+    'binary': ['png', 'jpg', 'jpeg', 'gif', 'ico']
+  },
+  inputs: {
+    html: '**/*.html',
+    css: '**/*.css',
+    images: '**/*.{png,jpg,jpeg,gif}'
+  },
+  outputs: ({ html, css, images }) => ({
+    // Output processed HTML files
+    'index.html': contentsOfFiles(html),
+    // Bundle all CSS into one file
+    'styles.css': contentsOfFiles(css),
+    // Copy images as-is
+    ...Object.keys(images).reduce((acc, key) => ({
+      ...acc,
+      [key.replace('src/', '')]: images[key]
+    }), {})
+  })
+};
 
-### Funkophile.config.js
+export default config;
+```
 
-Funkophile is configured with Funkophile.config.js. It has 3 sections of note:
+## Getting Started
 
-#### inputs
-`inputs` is a list of configurations defining which files get read and where to store those results in the redux stores
+1. Install dependencies:
+```bash
+yarn install
+```
 
-#### outputs
-`outputs` is a function which accepts object of selectors, keyed by inputs. These selectors are connected to the redux state and you can use it to handle changes to the redux state, which itself is reacting to changes in the filesystem. This function returns hash object, where the keys are files to write, and the values are the contents of those files.
+2. Build once:
+```bash
+yarn transpile
+```
 
-#### selectors
-At the heart of Funkophile is the selector. Within the `outputs` function, you can define any selectors you like, using any JS library you want, provided they are _purely functional_. This means that Funkophile needs no community plugins and can be made to do complex logic cleanly.
+3. Watch for changes and serve:
+```bash
+yarn dev
+```

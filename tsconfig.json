@@ -10,8 +10,19 @@
     "esModuleInterop": true,
     "declaration": true,
     "strict": true,
-    "rootDir": "."
+    "rootDir": ".",
+    "noImplicitAny": false,
+    "useUnknownInCatchVariables": false,
+    "emitDeclarationOnly": true,
+    "skipLibCheck": true
   },
-  "include": ["*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "index.ts",
+    "funkophileHelpers.ts",
+    "utils.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
