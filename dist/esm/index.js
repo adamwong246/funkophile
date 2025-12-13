@@ -83,7 +83,6 @@ function newStore(funkophileConfig) {
   );
   return createStore(
     (state = {
-      initialLoad: true,
       ...initialInputState,
       ...funkophileConfig.initialState,
       timestamp: Date.now()
@@ -91,23 +90,16 @@ function newStore(funkophileConfig) {
       if (state === void 0) {
         throw new Error("Redux state is undefined. This should never happen.");
       }
-      console.log(
-        `\x1B[35m\x1B[1m[Funkophile]\x1B[0m Redux received action: ${action.type}`
-      );
       if (!action.type.includes("@@redux")) {
         if (action.type === INITIALIZE) {
           console.log(
-            `\x1B[35m\x1B[1m[Funkophile]\x1B[0m INITIALIZE action - setting initialLoad to false`
+            `\x1B[35m\x1B[1m[Funkophile]\x1B[0m INITIALIZE action`
           );
           return {
             ...state,
-            initialLoad: false,
             timestamp: Date.now()
           };
         } else if (action.type === UPSERT) {
-          console.log(
-            `\x1B[35m\x1B[1m[Funkophile]\x1B[0m UPSERT action for key: ${action["payload"].key}, file: ${action["payload"].src}`
-          );
           return {
             ...state,
             [action["payload"].key]: {
@@ -120,9 +112,6 @@ function newStore(funkophileConfig) {
             timestamp: Date.now()
           };
         } else if (action.type === REMOVE) {
-          console.log(
-            `\x1B[35m\x1B[1m[Funkophile]\x1B[0m REMOVE action for key: ${action["payload"].key}, file: ${action["payload"].file}`
-          );
           const currentKeyState = state[action["payload"].key] || {};
           return {
             ...state,
@@ -149,14 +138,7 @@ function makeFinalSelector(funkophileConfig) {
       return {
         ...mm,
         [inputKey]: createSelector([(x) => x], (root) => {
-          const result = root[inputKey];
-          if (result === void 0) {
-            console.warn(
-              `\x1B[33m\x1B[1m[Funkophile]\x1B[0m Input key "${inputKey}" is undefined in state, which shouldn't happen. Using empty object.`
-            );
-            return {};
-          }
-          return result;
+          return root[inputKey] || {};
         })
       };
     }, {})
@@ -239,44 +221,6 @@ function startServing(funkophileConfig) {
       server.close();
     }
   });
-}
-function logInputKeys(funkophileConfig, currentState) {
-  Object.keys(funkophileConfig.inputs).forEach((inputKey) => {
-    if (currentState[inputKey]) {
-      console.log(
-        `\x1B[36m\x1B[1m[Funkophile]\x1B[0m Input key "${inputKey}" found in state with ${Object.keys(currentState[inputKey]).length} files`
-      );
-      if (Object.keys(currentState[inputKey]).length > 0) {
-        console.log(
-          `\x1B[36m\x1B[1m[Funkophile]\x1B[0m Files for "${inputKey}":`,
-          Object.keys(currentState[inputKey])
-        );
-      }
-    } else {
-      console.warn(
-        `\x1B[33m\x1B[1m[Funkophile]\x1B[0m Input key "${inputKey}" NOT found in state`
-      );
-    }
-  });
-}
-function logDone(funkophileConfig, currentState) {
-  if (funkophileConfig.mode === "build") {
-    console.log(
-      "\x1B[32m\x1B[1m[Funkophile]\x1B[0m Build completed successfully!"
-    );
-    logger.done();
-  } else if (funkophileConfig.mode === "watch") {
-    console.log(
-      "\x1B[36m\x1B[1m[Funkophile]\x1B[0m Watching for file changes..."
-    );
-    const port = funkophileConfig.options.port || 8080;
-    console.log(
-      `\x1B[36m\x1B[1m[Funkophile]\x1B[0m Serving at: http://localhost:${port}/`
-    );
-    logger.waiting();
-  } else {
-    throw `\x1B[31m\x1B[1m[Funkophile]\x1B[0m The mode should be 'watch' or 'build', not "${funkophileConfig.mode}"`;
-  }
 }
 function makePromissesArray(funkophileConfig, store) {
   return Object.keys(funkophileConfig.inputs).map((inputRuleKey) => {
@@ -430,6 +374,7 @@ function makePromissesArray(funkophileConfig, store) {
 }
 
 // index.ts
+console.log("hello funkophile 0.0.4");
 Promise2.config({
   cancellation: true
 });
@@ -448,55 +393,10 @@ var index_default = (funkophileConfig) => {
     );
     store.subscribe(() => {
       const s = store.getState();
-      console.log(
-        `\x1B[36m\x1B[1m[Funkophile]\x1B[0m Store updated. initialLoad: ${s.initialLoad}, timestamp: ${s.timestamp}`
-      );
-      if (s.initialLoad) {
-        console.log(
-          "\x1B[36m\x1B[1m[Funkophile]\x1B[0m Initial load in progress, skipping processing..."
-        );
-        console.log(
-          "\x1B[36m\x1B[1m[Funkophile]\x1B[0m State keys during initial load:",
-          Object.keys(s)
-        );
-        return;
-      }
       logger.stateChange();
-      console.log(
-        "\x1B[36m\x1B[1m[Funkophile]\x1B[0m Processing state changes..."
-      );
-      console.log(
-        "\x1B[36m\x1B[1m[Funkophile]\x1B[0m Current state keys:",
-        Object.keys(s)
-      );
-      let outputs;
-      try {
-        outputs = finalSelector(s);
-        console.log(
-          `\x1B[36m\x1B[1m[Funkophile]\x1B[0m Generated ${Object.keys(outputs).length} outputs`
-        );
-      } catch (error) {
-        console.error(
-          "\x1B[31m\x1B[1m[Funkophile]\x1B[0m FATAL: Error in output selector chain ? :"
-        );
-        console.error("  Error:", error.message);
-        console.error("  Stack:", error.stack);
-        if (funkophileConfig.mode === "build") {
-          process.exit(1);
-        } else {
-          console.log(
-            "\x1B[33m\x1B[1m[Funkophile]\x1B[0m Continuing to watch for changes despite error..."
-          );
-          Object.keys(previousState).forEach((key) => {
-            delete previousState[key];
-          });
-          return;
-        }
-      }
+      const outputs = finalSelector(s);
       if (outputPromise.isPending()) {
-        console.log(
-          "\x1B[33m\x1B[1m[Funkophile]\x1B[0m Cancelling previous write operation!"
-        );
+        console.log("\x1B[33m\x1B[1m[Funkophile]\x1B[0m Cancelling previous write operation!");
         outputPromise.cancel();
       }
       outputPromise = Promise2.all(
@@ -504,12 +404,9 @@ var index_default = (funkophileConfig) => {
           new Set(Object.keys(previousState).concat(Object.keys(outputs)))
         ).map((key) => {
           return new Promise2((fulfill, reject) => {
-            if (!outputs[key]) {
+            if (!(key in outputs)) {
               const file = funkophileConfig.options.outFolder + "/" + key;
               logger.removedFile(file);
-              console.log(
-                `\x1B[31m\x1B[1m[Funkophile]\x1B[0m Removing file: ${file}`
-              );
               try {
                 fse2.unlinkSync("./" + file);
                 cleanEmptyFoldersRecursively(
@@ -536,6 +433,13 @@ var index_default = (funkophileConfig) => {
                       logger.writingError(relativeFilePath, err.message);
                       fulfill();
                     } else {
+                      if (typeof res !== "string" && !Buffer.isBuffer(res)) {
+                        console.error(
+                          `\x1B[31m\x1B[1m[Funkophile]\x1B[0m Invalid content type from function for ${relativeFilePath}`
+                        );
+                        fulfill();
+                        return;
+                      }
                       fse2.outputFile(relativeFilePath, res, (err2) => {
                         if (err2) {
                           logger.writingError(relativeFilePath, err2.message);
@@ -547,7 +451,7 @@ var index_default = (funkophileConfig) => {
                       });
                     }
                   });
-                } else if (typeof contents === "string") {
+                } else if (typeof contents === "string" || Buffer.isBuffer(contents)) {
                   fse2.outputFile(relativeFilePath, contents, (err) => {
                     if (err) {
                       logger.writingError(relativeFilePath, err.message);
@@ -557,17 +461,7 @@ var index_default = (funkophileConfig) => {
                       fulfill();
                     }
                   });
-                } else if (Buffer.isBuffer(contents)) {
-                  fse2.outputFile(relativeFilePath, contents, (err) => {
-                    if (err) {
-                      logger.writingError(relativeFilePath, err.message);
-                      fulfill();
-                    } else {
-                      logger.writingString(relativeFilePath);
-                      fulfill();
-                    }
-                  });
-                } else if (Array.isArray(contents)) {
+                } else if (Array.isArray(contents) || typeof contents === "object" && contents !== null) {
                   fse2.outputFile(
                     relativeFilePath,
                     JSON.stringify(contents),
@@ -581,7 +475,7 @@ var index_default = (funkophileConfig) => {
                       }
                     }
                   );
-                } else if (typeof contents.then === "function") {
+                } else if (typeof contents?.then === "function") {
                   logger.writingPromise(relativeFilePath);
                   Promise2.resolve(contents).then(
                     function(value) {
@@ -600,17 +494,13 @@ var index_default = (funkophileConfig) => {
                         });
                       }
                     },
-                    function(error) {
-                      logger.writingError(relativeFilePath, error.message);
+                    function(value) {
+                      logger.writingError(relativeFilePath, String(value));
                       fulfill();
                     }
                   );
                 } else {
-                  console.log(
-                    `\x1B[33m\x1B[1m[Funkophile]\x1B[0m Unrecognized content type for ${relativeFilePath}, attempting to write:`,
-                    typeof contents
-                  );
-                  fse2.outputFile(relativeFilePath, contents, (err) => {
+                  fse2.outputFile(relativeFilePath, String(contents), (err) => {
                     if (err) {
                       logger.writingError(relativeFilePath, err.message);
                       fulfill();
@@ -628,27 +518,32 @@ var index_default = (funkophileConfig) => {
         })
       ).then(() => {
         cleanEmptyFoldersRecursively(funkophileConfig.options.outFolder);
-        logDone(funkophileConfig, currentState);
+        if (funkophileConfig.mode === "build") {
+          console.log(
+            "\x1B[32m\x1B[1m[Funkophile]\x1B[0m Build completed successfully!"
+          );
+          logger.done();
+        } else if (funkophileConfig.mode === "watch") {
+          console.log(
+            "\x1B[36m\x1B[1m[Funkophile]\x1B[0m Watching for file changes..."
+          );
+          const port = funkophileConfig.options.port || 8080;
+          console.log(
+            `\x1B[36m\x1B[1m[Funkophile]\x1B[0m Serving at: http://localhost:${port}/`
+          );
+          logger.waiting();
+        } else {
+          console.error(
+            `\x1B[31m\x1B[1m[Funkophile]\x1B[0m The mode should be 'watch' or 'build', not "${funkophileConfig.mode}"`
+          );
+          process.exit(1);
+        }
       });
     });
-    console.log(
-      "\x1B[32m\x1B[1m[Funkophile]\x1B[0m Dispatching INITIALIZE action to enable processing..."
-    );
-    const currentState = store.getState();
-    console.log(
-      "\x1B[36m\x1B[1m[Funkophile]\x1B[0m Current state keys:",
-      Object.keys(currentState)
-    );
-    logInputKeys(funkophileConfig, currentState);
-    setTimeout(() => {
-      store.dispatch({
-        type: INITIALIZE,
-        payload: true
-      });
-      console.log(
-        "\x1B[32m\x1B[1m[Funkophile]\x1B[0m Store initialized. Ready to process changes!"
-      );
-    }, 100);
+    store.dispatch({
+      type: INITIALIZE,
+      payload: true
+    });
   });
 };
 export {

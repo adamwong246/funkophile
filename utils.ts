@@ -57,7 +57,7 @@ export const logger = {
   done: () => console.log("\u001b[7m Funkophile is done!\u001b[0m "),
 };
 
-export function cleanEmptyFoldersRecursively(folder: string) {
+export function cleanEmptyFoldersRecursively(folder: string): void {
   var isDir = fs.statSync(folder).isDirectory();
   if (!isDir) {
     return;
@@ -82,11 +82,11 @@ export function cleanEmptyFoldersRecursively(folder: string) {
 }
 
 export const dispatchUpsert = (
-  store: Store,
+  store: Store<any, Action<string>, any>,
   key: string,
   file: string,
   encodings: Record<string, string[]>
-) => {
+): void => {
   const fileType: string = path.basename(file).split(".")[1];
 
   let encoding: BufferEncoding = Object.keys(encodings).find((e) => {
@@ -105,12 +105,12 @@ export const dispatchUpsert = (
   });
 };
 
-export function omit(key: string, obj: any) {
+export function omit(key: string, obj: Record<string, any>): Record<string, any> {
   const { [key]: omitted, ...rest } = obj;
   return rest;
 }
 
-export function newStore(funkophileConfig): Store<any, Action<string>, any> {
+export function newStore(funkophileConfig: IConfig): Store<any, Action<string>, any> {
   const initialInputState = Object.keys(funkophileConfig.inputs).reduce(
     (state, inputKey) => {
       state[inputKey] = {};
@@ -122,7 +122,6 @@ export function newStore(funkophileConfig): Store<any, Action<string>, any> {
   return createStore(
     (
       state = {
-        initialLoad: true,
         ...initialInputState,
         ...funkophileConfig.initialState,
         timestamp: Date.now(),
@@ -132,23 +131,16 @@ export function newStore(funkophileConfig): Store<any, Action<string>, any> {
       if (state === undefined) {
         throw new Error("Redux state is undefined. This should never happen.");
       }
-      console.log(
-        `\u001b[35m\u001b[1m[Funkophile]\u001b[0m Redux received action: ${action.type}`
-      );
       if (!action.type.includes("@@redux")) {
         if (action.type === INITIALIZE) {
           console.log(
-            `\u001b[35m\u001b[1m[Funkophile]\u001b[0m INITIALIZE action - setting initialLoad to false`
+            `\u001b[35m\u001b[1m[Funkophile]\u001b[0m INITIALIZE action`
           );
           return {
             ...state,
-            initialLoad: false,
             timestamp: Date.now(),
           };
         } else if (action.type === UPSERT) {
-          console.log(
-            `\u001b[35m\u001b[1m[Funkophile]\u001b[0m UPSERT action for key: ${action["payload"].key}, file: ${action["payload"].src}`
-          );
           return {
             ...state,
             [action["payload"].key]: {
@@ -161,9 +153,6 @@ export function newStore(funkophileConfig): Store<any, Action<string>, any> {
             timestamp: Date.now(),
           };
         } else if (action.type === REMOVE) {
-          console.log(
-            `\u001b[35m\u001b[1m[Funkophile]\u001b[0m REMOVE action for key: ${action["payload"].key}, file: ${action["payload"].file}`
-          );
           // Ensure the key exists before trying to omit from it
           const currentKeyState = state[action["payload"].key] || {};
           return {
@@ -180,29 +169,19 @@ export function newStore(funkophileConfig): Store<any, Action<string>, any> {
           );
           process.exit(-1);
         }
-        // return state
       }
       return state;
     }
   );
 }
 
-export function makeFinalSelector(funkophileConfig) {
+export function makeFinalSelector(funkophileConfig: IConfig): (state: any) => any {
   return funkophileConfig.outputs(
     Object.keys(funkophileConfig.inputs).reduce((mm, inputKey) => {
       return {
         ...mm,
         [inputKey]: createSelector([(x) => x], (root) => {
-          // The input key should always be present now, even if it's an empty object
-          const result = root[inputKey];
-          // If result is undefined, it's a programming error since we initialize all input keys
-          if (result === undefined) {
-            console.warn(
-              `\u001b[33m\u001b[1m[Funkophile]\u001b[0m Input key "${inputKey}" is undefined in state, which shouldn't happen. Using empty object.`
-            );
-            return {};
-          }
-          return result;
+          return root[inputKey] || {};
         }),
       };
     }, {})
@@ -307,7 +286,7 @@ export function startServing(funkophileConfig): void {
 }
 
 // Log all input keys to see if they're present
-export function logInputKeys(funkophileConfig, currentState) {
+export function logInputKeys(funkophileConfig: IConfig, currentState: any): void {
   Object.keys(funkophileConfig.inputs).forEach((inputKey) => {
     if (currentState[inputKey]) {
       console.log(
@@ -330,7 +309,7 @@ export function logInputKeys(funkophileConfig, currentState) {
   });
 }
 
-export function logDone(funkophileConfig, currentState) {
+export function logDone(funkophileConfig: IConfig, currentState: any): void {
   if (funkophileConfig.mode === "build") {
     console.log(
       "\u001b[32m\u001b[1m[Funkophile]\u001b[0m Build completed successfully!"
@@ -351,7 +330,7 @@ export function logDone(funkophileConfig, currentState) {
   }
 }
 
-export function makePromissesArray(funkophileConfig, store) {
+export function makePromissesArray(funkophileConfig: IConfig, store: Store<any, Action<string>, any>): Promise<void>[] {
   return Object.keys(funkophileConfig.inputs).map((inputRuleKey) => {
     // Ensure the pattern includes the inFolder and is relative to the current working directory
     // Also, make sure to handle patterns that might already include the inFolder

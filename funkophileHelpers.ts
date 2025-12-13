@@ -1,7 +1,7 @@
 import { createSelector } from "reselect";
 import path from "path";
 
-export const contentsOfFiles = (selector) => {
+export const contentsOfFiles = (selector: (state: any) => Record<string, string | Buffer>): any => {
   return createSelector([selector], (selected) => {
     if (selected === undefined || selected === null) {
       throw new Error(`contentsOfFiles: selected is ${selected}. Make sure the selector is pointing to valid state.`);
@@ -15,7 +15,7 @@ export const contentsOfFiles = (selector) => {
   });
 };
 
-export const contentOfFile = (selector) => {
+export const contentOfFile = (selector: (state: any) => Record<string, string | Buffer>): any => {
   return createSelector([selector], (selected) => {
     if (selected === undefined || selected === null) {
       throw new Error(`contentOfFile: selected is ${selected}. Make sure the selector is pointing to valid state.`);
@@ -29,7 +29,7 @@ export const contentOfFile = (selector) => {
   });
 };
 
-export const srcAndContentOfFile = (selector, key: string) => {
+export const srcAndContentOfFile = (selector: (state: any) => Record<string, string | Buffer>, key: string): any => {
   return createSelector([selector], (selected) => {
     if (selected === undefined || selected === null) {
       throw new Error(`srcAndContentOfFile: selected is ${selected}. Make sure the selector is pointing to valid state.`);
@@ -102,7 +102,7 @@ export const srcAndContentOfFile = (selector, key: string) => {
   });
 };
 
-export const srcAndContentOfFiles = (selector) => {
+export const srcAndContentOfFiles = (selector: (state: any) => Record<string, string | Buffer>): any => {
   return createSelector([selector], (selected) => {
     if (selected === undefined || selected === null) {
       throw new Error(`srcAndContentOfFiles: selected is ${selected}. Make sure the selector is pointing to valid state.`);

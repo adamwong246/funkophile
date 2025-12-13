@@ -4,21 +4,6 @@ The _func_tional _file_ processor.
 
 Funkophile is a lightweight, functional build tool that processes files using Redux selectors. It can operate in both build and watch modes, making it perfect for static site generation, asset pipelines, and other file transformation tasks.
 
-## Key Features
-
-- **Functional Architecture**: Uses Redux for state management and Reselect for efficient memoized computations
-- **File Watching**: Automatically rebuilds when input files change
-- **Development Server**: Built-in HTTP server for previewing output
-- **Flexible Input/Output**: Define input patterns and output transformations using pure functions
-- **No Plugins Needed**: Everything is configured through code using familiar Redux patterns
-
-## How It Works
-
-1. **Inputs**: Define glob patterns to watch for input files
-2. **Processing**: Files are read into the Redux store
-3. **Transformation**: Custom selector functions process the file contents
-4. **Output**: Results are written to the output directory
-
 ## Example Usage
 
 ```javascript
@@ -54,4 +39,3 @@ const config = {
     }), {})
   })
 };
-
